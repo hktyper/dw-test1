@@ -1,0 +1,25 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*",
+        "logs:*",
+        "cloudwatch:*",
+        "dynamodb:*",
+        "ecr:*",
+        "events:*",
+        "s3:*",
+        "iam:*",
+        "codeartifact:*",
+        "codebuild:*",
+        "codepipeline:*",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "sns:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}

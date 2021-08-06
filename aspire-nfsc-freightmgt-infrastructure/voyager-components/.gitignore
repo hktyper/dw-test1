@@ -1,0 +1,10 @@
+./.idea
+master_variables.json
+.DS_Store
+changeApi.zip
+**/.terraform/
+.idea
+.dev_params
+
+.cache
+work-dir

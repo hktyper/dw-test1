@@ -1,0 +1,21 @@
+s3_logging_bucket:
+  description: ""
+  component_folder: "s3_logging_bucket"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      account_number:
+      project_name:
+      environment:
+      owner:
+      email:
+      costcentre:
+      live:

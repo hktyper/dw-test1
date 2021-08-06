@@ -1,0 +1,26 @@
+---
+containers:
+    cpu: 1024
+    memory: 3072
+    rlimit: 2
+    row_threshold: 2650
+shipments:
+    cpu: 1024
+    memory: 3072
+    rlimit: 2
+    row_threshold: 4852
+exceptions:
+    cpu: 2048
+    memory: 8192
+    rlimit: 7
+    row_threshold: 150862
+allocations:
+    cpu: 1024
+    memory: 3072
+    rlimit: 2
+    row_threshold: 73019
+orderlines:
+    cpu: 2048
+    memory: 12288
+    rlimit: 11
+    row_threshold: 246142

@@ -1,0 +1,80 @@
+voyager_vpc:
+  description: "VPC for Freight Management KNN"
+  component_folder: "vpc"
+  version: "v1.2.0"
+  enable: true
+  terraform_state:
+    bucket: aspire-nfsc-freightmgt-dev-voyager-backend-lock-table
+    key: freightmgt-knn/freightmgt-knn-terraform.tfstate
+    dynamodb_table: aspire-nfsc-freightmgt-dev-voyager-backend-lock-table
+  auth:
+    aws_profile: grada-nfsc-freightmgt-nonprod
+    iam_role: developer
+  terragrunt_vars:
+    inputs:
+      project_name: aspire-nfsc-freightmgt-knn
+      account_number: "302718774358"
+      environment: dev
+      owner: GDP_APPLE
+      email: GDP_APPLE@sainsburys.co.uk
+      costcentre: PD7455
+      live: "no"
+      vpc_cidr: 192.168.0.0/24    
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+      private_subnets:
+        - 192.168.0.0/26
+        - 192.168.0.64/26
+      public_subnets:
+        - 192.168.0.128/26
+        - 192.168.0.192/26  
+      vpc_flowlogs_s3_bucket: "aspire-nfsc-freightmgt-infrastructure-dev-vpc-flowlogs"
+      vpc_enable_nat_gateway: true
+      vpc_description: "VPC for Freight Management KNN"
+      single_nat_gateway: true
+      enable_nat_gateway: false
+voyager_privatelink:
+    description: "Enables private connections to snowflake via the AWS network"
+    enable: true
+    version: "v1.1.0"
+    auth:
+      aws_profile: grada-nfsc-freightmgt-nonprod
+      iam_role: developer
+    terraform_state:
+      bucket: aspire-nfsc-freightmgt-dev-voyager-backend-lock-table
+      key: freightmgt-snowflake-knn/freightmgt-snowflake-knn-terraform.tfstate
+      dynamodb_table: aspire-nfsc-freightmgt-dev-voyager-backend-lock-table
+    component_folder: "privatelink"
+    terragrunt_vars:
+      inputs:
+        project_name: aspire-nfsc-freightmgt-knn
+        account_number: "302718774358"
+        environment: dev
+        owner: GDP_APPLE
+        email: GDP_APPLE@sainsburys.co.uk
+        costcentre: PD7455
+        live: "no"
+      dependency:
+        voyager_vpc:
+          config_path: "../voyager_vpc"
+          mock_outputs:
+            id: "dummy id"
+            private_subnet_ids:
+              - "dummy id"
+            private_route_table_ids:
+              - dummy
+              - list
+            private_subnet_cidrs:
+              - "0.0.0.0/22"
+              - "0.0.0.0/22"      
+      inputs:
+        account_number: "302718774358"
+        vpc_endpoint_ingress_cidrs:
+          - "${dependency.voyager_vpc.outputs.private_subnet_cidrs[1]}"
+          - "192.168.0.0/24"
+        vpc_id: "${dependency.voyager_vpc.outputs.id}"
+        vpce_snowflake_address_id: "03594486c11f7955a"
+        private_subnet_ids: "${dependency.voyager_vpc.outputs.private_subnet_ids}"
+        region: eu-west-1        

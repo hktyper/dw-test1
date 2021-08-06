@@ -1,0 +1,35 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:*",
+        "logs:*",
+        "cloudwatch:*",
+        "dynamodb:*",
+        "ecr:*",
+        "elasticmapreduce:*",
+        "events:*",
+        "s3:*",
+        "iam:*",
+        "kms:*",
+        "lambda:*",
+        "codeartifact:*",
+        "codebuild:*",
+        "codepipeline:*",
+        "ssm:GetParameter",
+        "ssm:GetParameters",
+        "sns:*",
+        "sqs:*",
+        "ecs:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": "codestar-connections:UseConnection",
+      "Resource": "${codestar_connection_arn}"
+    }
+  ]
+}

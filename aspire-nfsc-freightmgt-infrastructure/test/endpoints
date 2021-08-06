@@ -1,0 +1,46 @@
+{
+    "VpcEndpoints": [
+        {
+            "VpcEndpointId": "vpce-00b3fe1f2db63e642",
+            "VpcEndpointType": "Interface",
+            "VpcId": "vpc-06ff420c51d3e1d1d",
+            "ServiceName": "com.amazonaws.eu-west-1.s3",
+            "State": "available",
+            "PolicyDocument": "{\n  \"Statement\": [\n    {\n      \"Action\": \"*\", \n      \"Effect\": \"Allow\", \n      \"Principal\": \"*\", \n      \"Resource\": \"*\"\n    }\n  ]\n}",
+            "RouteTableIds": [],
+            "SubnetIds": [
+                "subnet-0aa591ccf60769f2b",
+                "subnet-0747891338aacdd89"
+            ],
+            "Groups": [
+                {
+                    "GroupId": "sg-0b1d3eaf028a2d7f7",
+                    "GroupName": "aspire-dev-dms-alternative"
+                }
+            ],
+            "PrivateDnsEnabled": false,
+            "RequesterManaged": false,
+            "NetworkInterfaceIds": [
+                "eni-02cfd4b56d48a55d0",
+                "eni-0c6d027b05b6452b1"
+            ],
+            "DnsEntries": [
+                {
+                    "DnsName": "*.vpce-00b3fe1f2db63e642-ck6x3n8t.s3.eu-west-1.vpce.amazonaws.com",
+                    "HostedZoneId": "Z38GZ743OKFT7T"
+                },
+                {
+                    "DnsName": "*.vpce-00b3fe1f2db63e642-ck6x3n8t-eu-west-1b.s3.eu-west-1.vpce.amazonaws.com",
+                    "HostedZoneId": "Z38GZ743OKFT7T"
+                },
+                {
+                    "DnsName": "*.vpce-00b3fe1f2db63e642-ck6x3n8t-eu-west-1a.s3.eu-west-1.vpce.amazonaws.com",
+                    "HostedZoneId": "Z38GZ743OKFT7T"
+                }
+            ],
+            "CreationTimestamp": "2021-04-09T10:00:06.006000+00:00",
+            "Tags": [],
+            "OwnerId": "392692317204"
+        }
+    ]
+}

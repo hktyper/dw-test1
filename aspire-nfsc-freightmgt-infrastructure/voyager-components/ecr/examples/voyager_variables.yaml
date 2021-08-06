@@ -1,0 +1,26 @@
+pipeline_ecr:
+  description: "ecr for CodePipeline"
+  component_folder: "ecr"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    terraform:
+      after_hook:
+        post_apply:
+          commands:
+            - "apply"
+          execute:
+            - "/bin/sh"
+            - "./post_deploy.sh"
+    inputs:
+      environment: dev
+      aws_region: eu-west-1
+      service_name:
+      project_name:

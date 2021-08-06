@@ -1,0 +1,214 @@
+voyager_vpc:
+  description: ""
+  component_folder: "vpc"
+  terragrunt_vars:
+    include:
+      - path: "${find_in_parent_folders()}"
+    inputs:
+      project_name: <Project Name>
+      environment: dev
+      owner: <Owner
+      email: <E-mail>
+      costcentre: PD7101
+      live: 'no'
+      vpc_cidr: 10.8.73.0/27
+      vpc_secondary_cidr_blocks:
+        - 10.0.0.0/22
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+        - eu-west-1c
+      private_subnets:
+        - 10.0.0.0/25
+        - 10.0.0.128/26
+        - 10.8.73.0/27
+      public_subnets:
+        - 10.0.0.192/27
+        - 10.0.0.224/28
+        - 10.0.0.240/28
+      vpc_flowlogs_s3_bucket: <FlowLogs Bucket>
+      single_nat_gateway: true
+      vpc_enable_nat_gateway: false
+      vpc_description: <VPC Description>
+      vpc_interface_endpoint_services:
+        - secretsmanager
+        - ecs
+        - ecr.dkr
+        - ecs-telemetry
+        - logs
+        - ecs-agent
+voyager_fargate_ecs:
+  description: ""
+  component_folder: "fargate_ecs"
+  terragrunt_vars:
+    include:
+      - path: "${find_in_parent_folders()}"
+    dependency:
+      vpc:
+        config_path: "../vpc"
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids: 
+            - "dummy id"
+            - "dummy id2"
+            - "dummy id3"
+          private_route_table_ids:
+            - dummy
+            - list   
+    inputs:
+      project_name: <Project Name>
+      environment: dev
+      owner: <Owner>
+      email: <Email>
+      costcentre: <CostCentre>
+      live: 'no'
+      region: eu-west-1
+      cluster_suffix: dev
+      environment: dev
+      create_microservices: true
+      create_tasks: true
+      fargate_microservices:
+        logistics-service-dev-stock-adjustment-service:
+          name: logistics-service-dev-stock-adjustment-service
+          task_definition: dev-logistics-service-stock-adjustments-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: dev-ecs-azure-sg
+        logistics-service-dev-stock-balance-service:
+          name: logistics-service-dev-stock-balance-service
+          task_definition: dev-logistics-service-stock-balance-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: dev-ecs-azure-sg
+        logistics-service-dev-stock-receipts-service:
+          name: logistics-service-dev-stock-receipts-service
+          task_definition: dev-logistics-service-stock-receipts-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: dev-ecs-azure-sg
+        logistics-service-dev-delivery-service:
+          name: logistics-service-dev-delivery-service
+          task_definition: dev-logistics-service-dev-delivery-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: dev-ecs-azure-sg
+        logistics-service-dev-delivery-manifest:
+          name: logistics-service-dev-delivery-manifest-service
+          task_definition: dev-logistics-service-dev-delivery-manifest-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: dev-ecs-azure-sg
+      ecs_tasks:
+        dev-logistics-service-stock-adjustments-task:
+          family: dev-logistics-service-stock-adjustments-task
+          container_definition: ./templates/stock-adjustments-task-definition.json
+          cpu: "1024"
+          memory: "4096"
+          container_port: "3128"
+        dev-logistics-service-stock-balance-task:
+          family: dev-logistics-service-stock-balance-task
+          container_definition: ./templates/stock-balance-task-definition.json
+          cpu: "1024"
+          memory: "4096"
+          container_port: "3128"
+        dev-logistics-service-stock-receipts-task:
+          family: dev-logistics-service-stock-receipts-task
+          container_definition: ./templates/stock-receipts-task-definition.json
+          cpu: "1024"
+          memory: "4096"
+          container_port: "3128"
+        dev-logistics-service-dev-delivery-task:
+          family: dev-logistics-service-dev-delivery-task
+          container_definition: ./templates/delivery-task-definition.json
+          cpu: "4096"
+          memory: "20480"
+          container_port: "3128"
+        dev-logistics-service-dev-delivery-manifest:
+          family: dev-logistics-service-dev-delivery-manifest-task
+          container_definition: ./templates/delivery-manifest-definition.json
+          cpu: "4096"
+          memory: "20480"
+          container_port: "3128"
+      #Below variables are container variables that will be available to each service/task defined above
+      extra_template_variables:
+          # General
+        CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "3"
+        CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "3"
+        CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "3"
+        SSL_AUTHENTICATION_TYPE: SSL
+        SASL_AUTHENTICATION_TYPE: SASL
+        SASL_SECRET: <SASL Secret>
+        KEYSTORE_SECRET: <KeyStore Secret>
+        KEYSTORE_PASS_SECRET: <KeyStore Secret Password>
+        KAFKA_CONNECT_S3_SINK_AWS_REGION: eu-west-1
+        KAFKA_CONNECT_S3_SINK_TASKS_MAX: "2"
+        KAFKA_HEAP_OPTS: -Xms512m -Xmx8g
+        KAFKA_CONNECT_S3_SINK_S3_BUCKET: <S3 Transfer Bucket Name>
+        CONNECT_BOOTSTRAP_SERVERS_AZURE: pkc-lz6r3.northeurope.azure.confluent.cloud:9092
+        # Stock Adjustments
+        CONNECT_GROUP_ID_STOCK_ADJUSTMENTS: Aspire-Lime-stock-adjustments-dev-v4
+        CONNECT_CONFIG_STORAGE_TOPIC_STOCK_ADJUSTMENTS: aspire-lime-stock-adjustments-connect-configs-dev-v4
+        CONNECT_OFFSET_STORAGE_TOPIC_STOCK_ADJUSTMENTS: aspire-lime-stock-adjustments-connect-offset-dev-v4
+        CONNECT_STATUS_STORAGE_TOPIC_STOCK_ADJUSTMENTS: aspire-lime-stock-adjustments-connect-status-dev-v4
+        KAFKA_CONNECT_S3_SINK_NAME_STOCK_ADJUSTMENTS: Aspire-Lime-stock-adjustments-s3-sink-dev-v4
+        KAFKA_CONNECT_S3_SINK_TOPICS_STOCK_ADJUSTMENTS: js-logistics-stock-adjustments-food-depot-v1-tst,js-logistics-stock-adjustments-gmc-depot-v1-tst
+        KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_STOCK_ADJUSTMENTS: "15"
+        KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_STOCK_ADJUSTMENTS: "6000"
+        # Stock Balance
+        CONNECT_GROUP_ID_STOCK_BALANCE: Aspire-Lime-stock-balance-dev-v1
+        CONNECT_CONFIG_STORAGE_TOPIC_STOCK_BALANCE: aspire-lime-stock-balance-connect-configs-dev-v1
+        CONNECT_OFFSET_STORAGE_TOPIC_STOCK_BALANCE: aspire-lime-stock-balance-connect-offset-dev-v1
+        CONNECT_STATUS_STORAGE_TOPIC_STOCK_BALANCE: aspire-lime-stock-balance-connect-status-dev-v1
+        KAFKA_CONNECT_S3_SINK_NAME_STOCK_BALANCE: Aspire-Lime-stock-balance-s3-sink-dev-v1
+        KAFKA_CONNECT_S3_SINK_TOPICS_STOCK_BALANCE: js-logistics-stock-balance-food-depot-v1-tst,js-logistics-stock-balance-gmc-depot-v1-tst
+        KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_STOCK_BALANCE: "15"
+        KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_STOCK_BALANCE: "6000"
+        # Stock Receipts
+        CONNECT_GROUP_ID_STOCK_RECEIPTS: Aspire-Lime-stock-receipts-dev-v4
+        CONNECT_CONFIG_STORAGE_TOPIC_STOCK_RECEIPTS: aspire-lime-stock-receipts-connect-configs-dev-v1
+        CONNECT_OFFSET_STORAGE_TOPIC_STOCK_RECEIPTS: aspire-lime-stock-receipts-connect-offset-dev-v1
+        CONNECT_STATUS_STORAGE_TOPIC_STOCK_RECEIPTS: aspire-lime-stock-receipts-connect-status-dev-v1
+        KAFKA_CONNECT_S3_SINK_NAME_STOCK_RECEIPTS: Aspire-Lime-stock-receipts-s3-sink-dev-v1
+        KAFKA_CONNECT_S3_SINK_TOPICS_STOCK_RECEIPTS: js-logistics-stock-receipts-depot-v1-tst,js-logistics-stock-receipts-store-v1-tst,js-logistics-stock-receipts-supplier-v1-tst
+        KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_STOCK_RECEIPTS: "15"
+        KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_STOCK_RECEIPTS: "6000"
+        # Delivery
+        CONNECT_GROUP_ID_DELIVERY: Aspire-Lime-delivery-dev-v5
+        CONNECT_CONFIG_STORAGE_TOPIC_DELIVERY: aspire-lime-delivery-configs-dev-v5
+        CONNECT_OFFSET_STORAGE_TOPIC_DELIVERY: aspire-lime-delivery-offset-dev-v5
+        CONNECT_STATUS_STORAGE_TOPIC_DELIVERY: aspire-lime-delivery-status-dev-v5
+        KAFKA_CONNECT_S3_SINK_NAME_DELIVERY: Aspire-Lime-delivery-s3-sink-dev-v5
+        KAFKA_CONNECT_S3_SINK_TOPICS_DELIVERY: js-logistics-delivery-desadv-depot-v1-tst,js-logistics-delivery-desadv-store-v1-tst,js-logistics-delivery-desadv-supplier-v1-tst
+        KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_DELIVERY: "15"
+        KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_DELIVERY: "900000"
+        # Delivery Manifest
+        CONNECT_GROUP_ID_DELIVERY_MANIFEST: Aspire-Lime-delivery-manifest-dev-v1
+        CONNECT_CONFIG_STORAGE_TOPIC_DELIVERY_MANIFEST: aspire-lime-delivery-manifest-connect-configs-dev-v1
+        CONNECT_OFFSET_STORAGE_TOPIC_DELIVERY_MANIFEST: aspire-lime-delivery-manifest-connect-offset-dev-v1
+        CONNECT_STATUS_STORAGE_TOPIC_DELIVERY_MANIFEST: aspire-lime-delivery-manifest-connect-status-dev-v1
+        KAFKA_CONNECT_S3_SINK_NAME_DELIVERY_MANIFEST: Aspire-Lime-delivery-manifest-s3-sink-dev-v1
+        KAFKA_CONNECT_S3_SINK_TOPICS_DELIVERY_MANIFEST: js-logistics-delivery-manifest-v1-tst
+        KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_DELIVERY_MANIFEST: "15"
+        KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_DELIVERY_MANIFEST: "6000"
+      vpc_id: "${dependency.vpc.outputs.id}"
+      ecs_service_subnets:
+        - "${dependency.vpc.outputs.private_subnet_ids[2]}"
+      cw_logs_retention: 7
+      #Replace with docker image for Kafka Connect deployment
+      docker_image: <Docker Image URL>
+      #Replace with secret names that the ECS services require access to.
+      secret_names:
+        - <Secret Names>
+      s3_bucket_names:
+        - dev-voyager-artefacts-logistics-service
+      security_groups:
+        dev-ecs-azure-sg:
+          ingress_port: "443"
+          ingress_protocol: TCP
+          ingress_cidr_blocks:
+            - 0.0.0.0/0
+          egress_port: "0"
+          egress_protocol: "-1"
+          egress_cidr_blocks:
+            - 0.0.0.0/0

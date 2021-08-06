@@ -1,0 +1,236 @@
+---
+- hosts:  all
+  tasks:
+    - name: Update repositories
+      apt: update_cache=yes force_apt_get=yes cache_valid_time=3600
+      become: yes
+      become_method: sudo
+
+    - name: Upgrade all packages
+      apt: upgrade=dist force_apt_get=yes
+      become: yes
+      become_method: sudo
+
+    - name: Set memory swapping to 1
+      command: sysctl -w vm.swappiness=1
+      become: yes
+      become_method: sudo
+
+    - name: disable thp1 
+      command: echo never > /sys/kernel/mm/transparent_hugepage/defrag
+      become: yes
+      become_method: sudo
+
+    - name: disable thp2
+      command: echo never > /sys/kernel/mm/transparent_hugepage/enabled
+      become: yes
+      become_method: sudo
+      
+    - name: add apt additional apt repo
+      shell: sudo add-apt-repository ppa:deadsnakes/ppa
+
+    - name: Install Python3.8
+      apt:
+        name: python3.8
+        state: present
+      become: yes
+      become_method: sudo
+
+    - name: Install packages
+      apt:
+        name:
+        - software-properties-common
+        state: present
+        cache_valid_time: 3600
+      become: yes
+      become_method: sudo
+
+    - name: Install required packages to api and transcoder
+      apt:
+        name: 
+        - python3-pip
+        - pipenv
+        - awscli
+        state: latest
+        update_cache: yes
+      become: yes
+      become_method: sudo
+
+    - name: Codebase directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        owner: ubuntu
+        group: ubuntu
+        mode: 0755
+      loop:
+        - /home/ubuntu/codebase
+        - /home/ubuntu/logs
+        - /home/ubuntu/logs/downloader/shipments
+        - /home/ubuntu/logs/downloader/containers
+        - /home/ubuntu/logs/downloader/exceptions
+        - /home/ubuntu/logs/downloader/orderlines
+        - /home/ubuntu/logs/transcoder/exceptions 
+        - /home/ubuntu/logs/transcoder/shipments 
+        - /home/ubuntu/logs/transcoder/containers
+        - /home/ubuntu/logs/transcoder/orderlines
+        - /home/ubuntu/logs/downloader/allocations
+        - /home/ubuntu/logs/transcoder/allocations
+
+    - name: race condition error wait until directory uid present
+      wait_for:
+        path: "{{ item }}"
+        state: present
+      loop:
+        - /home/ubuntu/codebase
+        - /home/ubuntu/logs
+        - /home/ubuntu/logs/downloader/shipments
+        - /home/ubuntu/logs/downloader/containers
+        - /home/ubuntu/logs/downloader/exceptions
+        - /home/ubuntu/logs/downloader/orderlines
+        - /home/ubuntu/logs/transcoder/exceptions 
+        - /home/ubuntu/logs/transcoder/shipments 
+        - /home/ubuntu/logs/transcoder/containers
+        - /home/ubuntu/logs/transcoder/orderlines
+        - /home/ubuntu/logs/downloader/allocations
+        - /home/ubuntu/logs/transcoder/allocations
+
+    - name: copy ssh key to ubuntu box in order to allow ssh and git clone
+      copy:
+        src: id_rsa
+        dest: /home/ubuntu/.ssh
+        owner: ubuntu
+        group: ubuntu
+        mode: 0600
+
+    - name: git clone transcoder
+      become: no
+      git:
+        repo: git@github.com:sainsburys-tech/aspire-nfsc-freightmgt-transcoder-service.git
+        dest: /home/ubuntu/codebase/aspire-nfsc-freightmgt-transcoder-service
+        version: master
+        accept_hostkey: yes 
+
+    - name: git clone downloader
+      become: no
+      git:
+        repo: git@github.com:sainsburys-tech/aspire-nfsc-freightmgt-api-downloader-service.git
+        dest: /home/ubuntu/codebase/aspire-nfsc-freightmgt-api-downloader-service
+        version: master
+        accept_hostkey: yes 
+
+    - name: set pipenv for transcoder service
+      command: pipenv install --dev moto[s3,sqs]
+      args:
+        chdir: /home/ubuntu/codebase/aspire-nfsc-freightmgt-transcoder-service
+
+    - name: set pipenv for api service
+      command: pipenv install --dev
+      args:
+        chdir: /home/ubuntu/codebase/aspire-nfsc-freightmgt-api-downloader-service
+
+    - name: log file
+      file:
+        path: /home/ubuntu/logs/{{ account }}_final_script.log
+        owner: ubuntu
+        group: ubuntu
+        state: touch
+        mode: 0644
+
+    - name: copy script across
+      copy:
+        src: ../scripts/{{ account }}_final_script_serialize_downloader.sh
+        dest: /home/ubuntu/codebase/{{ account }}_final_script_serialize_downloader.sh
+        owner: ubuntu
+        group: ubuntu
+        mode: 0544
+
+    - name: create knn downloader cron located at /etc/cron.d
+      cron:
+        name: knn dowloader
+        minute: "45"
+        hour: "5,10,13"
+        user: ubuntu
+        job: "/bin/bash -c '/home/ubuntu/codebase/{{ account }}_final_script_serialize_downloader.sh' >> /home/ubuntu/logs/{{ account }}_final_script.log"
+        cron_file: knn_downloader
+      become: yes
+      become_method: sudo
+
+    - name: run pytest for transcoder service
+      command: pipenv run pytest -sv
+      args:
+        chdir: /home/ubuntu/codebase/aspire-nfsc-freightmgt-transcoder-service
+
+    - name: run pytest for api service
+      command: pipenv run pytest -sv
+      args:
+        chdir: /home/ubuntu/codebase/aspire-nfsc-freightmgt-api-downloader-service
+
+    - name: clean up private key
+      command: rm -rf ./!(authorized_keys|known_hosts)
+      args:
+        chdir: /home/ubuntu/.ssh
+
+    - name: get cloudwatch deb package
+      command: sudo wget https://s3.amazonaws.com/amazoncloudwatch-agent/debian/amd64/latest/amazon-cloudwatch-agent.deb
+
+    - name: install cloudwatch deb package
+      command: sudo dpkg -i -E ./amazon-cloudwatch-agent.deb
+
+    - name: copy cloudwatch config json file 
+      copy:
+        src: config.json
+        dest: /opt/aws/amazon-cloudwatch-agent/bin
+        owner: root
+        group: root
+        mode: 0755
+      become: yes
+      become_method: sudo
+
+    - name: race condition error wait until cloudwatch json config file uid present
+      wait_for:
+        path: /opt/aws/amazon-cloudwatch-agent/bin/config.json
+        state: present
+
+    - name: replace cloudwatch json config file namespace based on environment
+      replace:
+        path: /opt/aws/amazon-cloudwatch-agent/bin/config.json
+        regexp: '(?<![\w\d])123456(?![\w\d])'
+        replace: '{{ account }}/freightmgt_ec2_tactical'
+      become: yes
+      become_method: sudo
+        
+    - name: create collectd directory
+      command: sudo mkdir -p /usr/share/collectd/
+    
+    - name: create db file
+      command: sudo touch /usr/share/collectd/types.db
+    
+    - name: apply cloudwatch config json file
+      command: sudo /opt/aws/amazon-cloudwatch-agent/bin/amazon-cloudwatch-agent-ctl -a fetch-config -m ec2 -c file:/opt/aws/amazon-cloudwatch-agent/bin/config.json -s
+
+    - name: copy tenable nessus agent 
+      copy:
+        src: NessusAgent-8.2.2-ubuntu1110_amd64.deb
+        dest: /opt/
+        owner: root
+        group: root
+        mode: 0755
+      become: yes
+      become_method: sudo
+
+    - name: install nessus agent
+      command: sudo dpkg -i NessusAgent-8.2.2-ubuntu1110_amd64.deb
+      args:
+        chdir: /opt
+    
+    - name: start nessus service
+      command: sudo /bin/systemctl start nessusagent.service
+
+    - name: configure nessus agent
+      command: sudo ./nessuscli agent link --key=147095fb700109499aaef9d9f68b9334e36703233af3f3cb44430d5fa58210cb --groups="Aspire" --host=cloud.tenable.com --port=443
+      args:
+        chdir: /opt/nessus_agent/sbin
+
+    - name: restart nessus service to apply config
+      command: sudo /bin/systemctl restart nessusagent.service

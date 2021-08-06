@@ -1,0 +1,220 @@
+voyager_vpc:
+  description: ""
+  component_folder: "vpc"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      project_name: logistics-service-component-test
+      environment: dev
+      owner: GDP_XXXXX
+      email: GDP_XXXXX@sainsburys.co.uk
+      costcentre: XXXXXX
+      live: 'no'
+      vpc_cidr: 0.0.0.0/27
+      vpc_secondary_cidr_blocks:
+        - 0.0.0.0/22
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+        - eu-west-1c
+      private_subnets:
+        - 0.0.0.0/25
+        - 0.0.0.0/26
+        - 0.0.0.0/27
+      public_subnets:
+        - 0.0.0.0/27
+        - 0.0.0.0/28
+        - 0.0.0.0/28
+      vpc_flowlogs_s3_bucket: ""
+      single_nat_gateway: true
+      vpc_enable_nat_gateway: false
+      vpc_description: VPC Desc
+      vpc_interface_endpoint_services:
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+voyager_privatelink:
+  description: ""
+  component_folder: "privatelink"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    dependency:
+      vpc:
+        config_path: "../vpc"
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids:
+            - "dummy id"
+          private_route_table_ids:
+            - dummy
+            - list
+          private_subnet_cidrs:
+            - "0.0.0.0/22"
+            - "0.0.0.0/22"
+            - "0.0.0.0/22"
+    inputs:
+      account_number: ""
+      vpc_endpoint_ingress_cidrs:
+        - "${dependency.vpc.outputs.private_subnet_cidrs[2]}"
+        - "0.0.0.0/22"
+      vpc_id: "${dependency.vpc.outputs.id}"
+      vpce_snowflake_address_id: ""
+      private_subnet_ids: "${dependency.vpc.outputs.private_subnet_ids}"
+      region: eu-west-1
+voyager_emr:
+  description: ""
+  component_folder: "emr"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    dependency:
+      vpc:
+        config_path: "../vpc"
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids:
+            - "dummy id"
+          private_route_table_ids:
+            - dummy
+            - list
+      privatelink:
+        config_path: "../privatelink"
+        skip_outputs: true
+    terraform:
+      before_hook:
+        before_hook:
+          commands:
+            - "plan"
+          execute:
+            - "/bin/bash"
+            - "./pre_deploy.sh"
+    inputs:
+      project_name: logistics-service-component-test
+      environment: dev
+      name: "voyager"
+      access_logs_bucket: ""
+      account_number: ""
+      email: GDP_XXXXX@sainsburys.co.uk
+      costcentre: XXXXXX
+      live: 'no'
+      owner: GDP_XXXXX
+      vpc_id: "${dependency.vpc.outputs.id}"
+      subnet_id: "${dependency.vpc.outputs.private_subnet_ids[0]}"
+      private_route_table_ids: "${dependency.vpc.outputs.private_route_table_ids}"
+      subnet_type: private
+      ebs_root_volume_size: 10
+      visible_to_all_users: true
+      release_label: "emr-5.28.1"
+      applications:
+        - Spark
+      custom_ami_id: "ami-0bcd3e1d48f694928"
+      core_instance_group_instance_type: "r5.xlarge"
+      core_instance_group_instance_count: 5
+      core_instance_group_ebs_size: 100
+      core_instance_group_ebs_type: "gp2"
+      core_instance_group_ebs_volumes_per_instance: 1
+      master_instance_group_instance_type: "m3.2xlarge"
+      master_instance_group_instance_count: 1
+      master_instance_group_ebs_size: 100
+      master_instance_group_ebs_type: "gp2"
+      master_instance_group_ebs_volumes_per_instance: 1
+      create_task_instance_group: false
+      vpc_cidr: 0.0.0.0/27
+      log_uri: ""
+      step_concurrency_level: 1
+      lambda_s3_key: "lambda-emr.zip"
+      lambda_runtime: "python3.7"
+      lambda_environment_variables:
+        SPARK_EXECUTOR_MEMORY: 2
+        SPARK_DRIVER_MEMORY: 2
+        SPARK_JOB_NUMBER_EXECUTORS: 1
+        PYSPARK_PYTHON: "/usr/local/bin/python3.7"
+        PYSPARK_PYTHON_DRIVER: "/usr/local/bin/python3.7"
+        SPARK_APP_URI: ""
+        SPARK_DEPENDANCIES_URI: ""
+      lambda_s3_local: "voyager-artefacts/lambda-emr.zip"
+      regex_file_name: "regex-to-config.yaml"
+      voyager_artefacts_dir_regex: "voyager-artefacts/*"
+      voyager_artefacts_dir: "voyager-artefacts/"
+      s3_logging_enforced_acl: "log-delivery-write"
+      enable_s3_access_log_bucket_creation: false
+      deploy_voyager_app: true
+      voyager_app_repo: "github.com:JSainsburyPLC/voyager-app.git"
+      voyager_app_branch: "v1.0.0"
+      regex_prefix:
+        - topics/js-logistics-delivery-desadv-depot
+        - topics/js-logistics-delivery-desadv-store
+        - topics/js-logistics-delivery-desadv-supplier
+        - topics/js-logistics-stock-adjustments-food-depot
+        - topics/js-logistics-stock-adjustments-gmc-depot
+        - topics/js-logistics-stock-balance-food-depot
+        - topics/js-logistics-stock-balance-gmc-depot
+        - topics/js-logistics-stock-receipts-depot
+        - topics/js-logistics-stock-receipts-store
+        - topics/js-logistics-stock-receipts-supplier
+  extra_vars:
+{
+  "etl_config": {
+    "s3-regex-path": {
+        "ETL_MODE": "BATCH",
+        "AWS_REGION": "eu-west-1",
+        "GPG_HOME": "~/.gnupg",
+        "RAW_S3_OUTPUT_ENABLED": false,
+        "RAW_S3_OUTPUT_BUCKET": "raw-s3-bucket",
+        "CURATED_S3_OUTPUT_ENABLED": true,
+        "CURATED_S3_OUTPUT_BUCKET": "curated-s3-bucket",
+        "CURATED_S3_OUTPUT_FORMAT": "parquet",
+        "PYSPARK_S3_PROTOCOL": "s3a",
+        "PYSPARK_WRITE_MODES": "append",
+        "PYSPARK_WRITE_MODE": "append",
+        "PYSPARK_WRITE_FILE_TYPES": "parquet",
+        "PII_ENCRYPTION_KEY_SECRETS": "",
+        "PII_ENCRYPTION_HASH_ALGORITHM": "SHA_256",
+        "SNOWFLAKE_DIRECT_WRITE_TO_STAGING_ENABLED": false,
+        "SNOWFLAKE_STG_USER_SECRET": "dev-snowflake-user",
+        "SNOWFLAKE_STG_PASSWORD_SECRET": "dev-snowflake-password",
+        "SNOWFLAKE_STG_WAREHOUSE": "ADW_SMALL_ADHOC_WH",
+        "SNOWFLAKE_STG_DATABASE": "ADW_DEV",
+        "SNOWFLAKE_STG_SCHEMA": "ADW_STAGE",
+        "SNOWFLAKE_STG_TABLE": "EXAMPLE_TABLE",
+        "SNOWFLAKE_STG_ROLE": "ADW_DEV_DEVELOPER",
+        "SNOWFLAKE_STG_URL": "sainsburys.eu-west-1.privatelink.snowflakecomputing.com",
+        "FAILED_FILE_S3_OUTPUT_ENABLED": true,
+        "FAILED_S3_OUTPUT_BUCKET": "failed-s3-bucket",
+        "ROBOCROP_DQ_RULES_ENABLED": false
+    }
+  },
+  "schema": {
+    "s3-path": {
+      "fields": [],
+      "type": "struct"
+    }
+  }
+}

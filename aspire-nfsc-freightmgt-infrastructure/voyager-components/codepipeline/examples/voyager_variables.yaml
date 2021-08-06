@@ -1,0 +1,49 @@
+pipeline:
+  description: "CodePipeline"
+  component_folder: "codepipeline"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    terraform:
+      before_hook:
+        pre_apply:
+          commands:
+            - "apply"
+          execute:
+            - "/bin/bash"
+            - "./pre_deploy.sh"
+    inputs:
+      environment: dev
+      aws_region: eu-west-1
+      service_name:
+      repo_name:
+      application_source_branch:
+      account_number:
+      deployment_item:
+      assignment_group:
+      github_token:
+      change_api_key:
+      project_name:
+      docker_image: ${dependency.ecr.outputs.ecr_url}:${run_cmd("git", "log", "-1", "--pretty=format:%h")}
+      codestar_connection_arn:
+      cross_account_roles:
+        - ${dependency.codepipeline_iam.outputs.iam_arn}
+      ecr_url: "${dependency.pipeline_ecr.outputs.ecr_url}"
+    dependency:
+      ecr:
+        config_path: ../ecr
+        mock_outputs:
+          ecr_url: "example.ecr.url"
+      codepipeline_iam:
+        config_path: ../codepipeline_iam
+        mock_outputs:
+          iam_arn: "arn::example"
+  extra_vars:
+    build_docker_image: true

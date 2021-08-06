@@ -1,0 +1,158 @@
+voyager_vpc:
+  description: ""
+  component_folder: "vpc"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      project_name: logistics-service-component-test
+      environment: dev
+      owner: GDP_XXXXX
+      email: GDP_XXXXX@sainsburys.co.uk
+      costcentre: XXXXXX
+      live: 'no'
+      vpc_cidr: 0.0.0.0/27
+      vpc_secondary_cidr_blocks:
+        - 0.0.0.0/22
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+        - eu-west-1c
+      private_subnets:
+        - 0.0.0.0/25
+        - 0.0.0.0/26
+        - 0.0.0.0/27
+      public_subnets:
+        - 0.0.0.0/27
+        - 0.0.0.0/28
+        - 0.0.0.0/28
+      vpc_flowlogs_s3_bucket: ""
+      single_nat_gateway: true
+      vpc_enable_nat_gateway: false
+      vpc_description: VPC Desc
+      vpc_interface_endpoint_services:
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+voyager_privatelink:
+  description: ""
+  component_folder: "privatelink"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    dependency:
+      vpc:
+        config_path: "../vpc"
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids: 
+            - "dummy id"
+          private_route_table_ids:
+            - dummy
+            - list
+          private_subnet_cidrs:
+            - "0.0.0.0/22"
+            - "0.0.0.0/22"
+            - "0.0.0.0/22" 
+    inputs:
+      account_number: logistics-service-component-test
+      vpc_endpoint_ingress_cidrs:
+        - "${dependency.vpc.outputs.private_subnet_cidrs[2]}"
+        - "00.0.0.0/22"
+      vpc_id: "${dependency.vpc.outputs.id}"
+      vpce_snowflake_address_id: ""
+      private_subnet_ids: "${dependency.vpc.outputs.private_subnet_ids}"
+      region: eu-west-1
+voyager_fargate_ecs:
+  description: ""
+  component_folder: "fargate_ecs"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    dependency:
+      vpc:
+        config_path: "../vpc"
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids: 
+            - "dummy id"
+            - "dummy id2"
+            - "dummy id3"
+          private_route_table_ids:
+            - dummy
+            - list
+      privatelink:
+        config_path: "../privatelink"
+        skip_outputs: true      
+    inputs:
+      project_name: test
+      environment: dev
+      owner: GDP_XXXXXX
+      email: GDP_XXXXX@sainsburys.co.uk
+      costcentre: XXXXX
+      live: 'no'
+      region: eu-west-1
+      cluster_suffix: dev
+      environment: dev
+      create_microservices: true
+      create_tasks: true
+      fargate_microservices:
+        test-service:
+          name: component-dev-task
+          task_definition: component-dev-task
+          desired_count: "1"
+          launch_type: FARGATE
+          security_group_mapping: component-dev-sg
+      ecs_tasks:
+        test-task:
+          family: component-dev-task
+          container_definition: ./templates/example.json
+          cpu: "1024"
+          memory: "2048"
+          container_port: "3128"
+      extra_template_variables: ""
+      vpc_id: "${dependency.vpc.outputs.id}"
+      ecs_service_subnets:
+        - "${dependency.vpc.outputs.private_subnet_ids[2]}"
+      cw_logs_retention: 7
+      docker_image: 
+      secret_names:
+        - test
+      s3_bucket_names:
+        - test
+      security_groups:
+        component-dev-sg:
+          ingress_port: "443"
+          ingress_protocol: TCP
+          ingress_cidr_blocks:
+            - 0.0.0.0/0
+          egress_port: "0"
+          egress_protocol: "-1"
+          egress_cidr_blocks:
+            - 0.0.0.0/0
+

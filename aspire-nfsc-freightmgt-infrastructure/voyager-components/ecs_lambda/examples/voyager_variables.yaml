@@ -1,0 +1,61 @@
+voyager_fargate_lambda:
+  description: ""
+  component_folder: "ecs_lambda"
+  version: "v1.0.0"
+  enable: true
+  auth:
+    aws_profile: voyager-non-prod
+  terraform_state:
+    bucket: <bucket>
+    key: <key>/terraform.tfstate
+    dynamodb_table: <some table name>
+  extra_vars:
+    deploy_lambda_app_code: true
+    lambda_code_git_repo: JSainsburyPLC/voyager-fargate-launcher-lambda.git
+    lambda_code_git_branch: develop
+    region: eu-west-1
+  terragrunt_vars:
+    dependency:
+      vpc:
+        # optional - we can also just specify a VPC ID created elsewhere
+        config_path: ../vpc
+        mock_outputs:
+          id: "dummy id"
+          private_subnet_ids:
+            - "dummy id"
+          private_route_table_ids:
+            - dummy
+            - list
+    terraform:
+      after_hook:
+        after_hook:
+          commands:
+            - "apply"
+          execute:
+            - "/bin/bash"
+            - "./post_deploy.sh"
+    inputs:
+      lambda_app_name: some-app-name
+      lambda_handler: "package.subpackage.module.function"
+      lambda_environment_variables:
+         # comma-separated list!
+         ECS_SUBNETS: "${dependency.vpc.outputs.private_subnet_ids[0]},${dependency.vpc.outputs.private_subnet_ids[1]}"
+      project_name: lambda-example
+      environment: dev
+      owner: your_squad
+      email: your_squad@sainsburys.co.uk
+      costcentre: your_costcentre
+      live: 'no'
+      region: eu-west-1
+      vpc_id: "${dependency.vpc.outputs.id}"
+      subnet_ids: "${dependency.vpc.outputs.private_subnet_ids}"
+      iam_statements:
+        # configured with minimal perms to kick off Fargate tasks
+        - actions:
+            - "ecs:RunTask*"
+          resources:
+            - "*"
+        - actions:
+            - "iam:PassRole*"
+          resources:
+            - "arn:aws:iam::*"

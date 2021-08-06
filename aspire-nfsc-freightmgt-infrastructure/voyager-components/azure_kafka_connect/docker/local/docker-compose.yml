@@ -1,0 +1,69 @@
+# Run docker-compose build
+# Run docker-compose up -d to start the containers
+# Create a producer with bootstrap-server=localhost:9092 and push data to topic=local-kafka-connect-test-topic
+---
+  version: '2'
+  services:
+    zookeeper:
+      image: confluentinc/cp-zookeeper:5.3.1
+      hostname: zookeeper
+      container_name: zookeeper
+      ports:
+        - "2181:2181"
+      environment:
+        ZOOKEEPER_CLIENT_PORT: 2181
+        ZOOKEEPER_TICK_TIME: 2000
+    
+    broker:
+      image: confluentinc/cp-enterprise-kafka:5.3.1
+      hostname: broker
+      container_name: broker
+      depends_on:
+        - zookeeper
+      ports:
+        - "9092:9092"
+      environment:
+        KAFKA_BROKER_ID: 1
+        KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+        KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+        KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+        KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+        KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+        KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+        CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: broker:29092
+        CONFLUENT_METRICS_REPORTER_ZOOKEEPER_CONNECT: zookeeper:2181
+        CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+        CONFLUENT_METRICS_ENABLE: 'true'
+        CONFLUENT_SUPPORT_CUSTOMER_ID: 'anonymous'
+    
+    s3-sink-connect:
+        image: kafka-connect-local
+        build: 
+          context: ../
+          dockerfile: kafka-connect.dockerfile
+        hostname: connect
+        container_name: connect
+        depends_on:
+          - zookeeper
+          - broker
+        ports:
+          - "8083:8083"
+        command: kafka-topics --create --topic local-kafka-connect-test-topic --partitions 1 --replication-factor 1 --if-not-exists --zookeeper zookeeper:2181
+        environment:
+          CONNECT_GROUP_ID: "local-kafka-connect"
+          CONNECT_BOOTSTRAP_SERVERS: "broker:29092"
+          CONNECT_CONFIG_STORAGE_TOPIC: "local-kafka-connect-configs"
+          CONNECT_OFFSET_STORAGE_TOPIC: "local-kafka-connect-offsets"
+          CONNECT_STATUS_STORAGE_TOPIC: "local-kafka-connect-status"
+          CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: "1"
+          CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: "1"
+          CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: "1"
+          KAFKA_CONNECT_S3_SINK_NAME: "local-kafka-connect-s3-sink"
+          KAFKA_CONNECT_S3_SINK_TOPICS: "local-kafka-connect-test-topic"
+          KAFKA_CONNECT_S3_SINK_AWS_REGION: "eu-west-1"
+          KAFKA_CONNECT_S3_SINK_S3_BUCKET: "maddy-test-raw"
+          KAFKA_CONNECT_S3_SINK_TASKS_MAX: "2"
+          KAFKA_CONNECT_S3_SINK_FLUSH_SIZE: "1"
+          KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS: "-1"
+          AWS_ACCESS_KEY_ID: "xxx"
+          AWS_SECRET_ACCESS_KEY: "xxx"

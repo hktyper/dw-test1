@@ -1,0 +1,64 @@
+{
+  "component_to_Deploy_1": {
+    "component_name": "example_component",
+    "tfvars": {
+        "emr_create_cloudwatch_events": true,
+        "ecs_cloudwatch_alarms": {
+            "ecs_memory_cloudwatch_alarm" : {
+                "Name"                 : "ECS-MemoryUtilization-PD-Logistics-Prod",
+                "Comparison_Operator" : "GreaterThanOrEqualToThreshold",
+                "Metric_name"          : "MemoryUtilization",
+                "Namespace"            : "AWS/ECS",
+                "Threshold"            : "80",
+                "Description"          : "This alarm sends a notification to PagerDuty if equal to or more than 80% of memory is used. A notification is sent to pagerDuty."
+            },
+            "ecs_cpu_cloudwatch_alarm" : {
+                "Name"                 : "ECS-CPUUtilization-PD-logistics-Prod",
+                "Comparison_Operator" : "GreaterThanOrEqualToThreshold",
+                "Metric_name"          : "CPUUtilization",
+                "Namespace"            : "AWS/ECS",
+                "Threshold"            : "80",
+                "Description"          : "This alarm sends a notification to PagerDuty if equal to or more than 80% of memory is used. A notification is sent to pagerDuty."
+            }
+          },
+        "ecs_cloudwatch_events": {
+            "ecs_state_cloudwatch_events": {
+                "Name"        : "ECS-State-Change-PD-Logistics-Prod",
+                "Description" : "This monitors the state changes of ECS. This sends a notification to PagerDuty",
+                "Tag"         : "ECS-State",
+                "Pattern"     : "./cloudwatch_templates/ecs_state_change.json.tpl"
+            }
+        }
+    },
+    "other_vars": {
+      "TF_STATE_BUCKET": "EXAMPLE BUCKET 1",
+      "TF_STATE_DDB_TABLE":  "EXAMPLE TABLE 1",
+      "TF_STATE_S3_KEY": "EXAMPLE S3 KEY 1",
+      "TF_VAR_region":  "EXAMPLE REGION 1",
+      "TF_VAR_environment":  "EXAMPLE ENVIRONMENT 1"}
+  },
+  "component_to_Deploy_2": {
+    "component_name": "example_component",
+    "tfvars": {
+        "emr_create_cloudwatch_events": true
+    },
+    "other_vars": { "TF_STATE_BUCKET": "EXAMPLE BUCKET 2",
+      "TF_STATE_DDB_TABLE":  "EXAMPLE TABLE 2",
+      "TF_STATE_S3_KEY": "EXAMPLE S3 KEY 2",
+      "TF_VAR_region":  "EXAMPLE REGION 2",
+      "TF_VAR_environment":  "EXAMPLE ENVIRONMENT 2"}
+  },
+   "component_to_Deploy_3": {
+    "component_name": "example_component_2",
+    "tfvars": {
+        "emr_create_cloudwatch_events": true
+    },
+    "other_vars": { "TF_STATE_BUCKET": "DIFFERENT EXAMPLE BUCKET",
+      "TF_STATE_DDB_TABLE":  "DIFFERENT EXAMPLE TABLE",
+      "TF_STATE_S3_KEY": "DIFFERENT EXAMPLE S3 KEY",
+      "TF_VAR_region":  "DIFFERENT EXAMPLE REGION",
+      "TF_VAR_environment":  "DIFFERENT EXAMPLE ENVIRONMENT"
+    },
+     "dependency_component_outputs": ["component_to_Deploy_2","component_to_Deploy_1"]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema-version": "1.0.0",
+  "name": "ASPIRE Freight Management Infrastructure Code",
+  "description": "Terraform repo able to deploy and run any job on a daily basis using ECS scheduled tasks",
+  "maintainers" : [
+    {
+      "type": "TEAM",
+      "name": "Apple",
+      "email": "gdp_apple@sainsburys.co.uk"
+    }
+  ],
+  "owners": [
+    {
+      "type": "PRODUCT-MANAGEMENT",
+      "name": "Natalie Smith",
+      "email": "natalie.smith@sainsburys.co.uk"
+    }
+  ]
+}

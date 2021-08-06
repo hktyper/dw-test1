@@ -1,0 +1,309 @@
+#!/usr/bin/env python3
+
+import glob
+import json
+import logging
+
+import os
+import shutil
+import click
+import yaml
+
+from yamlinclude import YamlIncludeConstructor
+from distutils.dir_util import copy_tree
+from pathlib import Path
+from subprocess import call
+from sys import exit
+
+
+def call_with_exit(command: str):
+    ret = call(command, shell=True)
+    if ret != 0:
+        exit(ret)
+
+class YamlDeploy:
+    def __init__(self, components_dir="./voyager-components/", working_dir="./work-dir/", cache_dir="./.cache"):
+        YamlIncludeConstructor.add_to_loader_class(loader_class=yaml.FullLoader, base_dir='./configuration')
+        self.components_vars = {}
+        self.aws_profiles = []
+        self.default_components_dir = components_dir
+        self.default_working_dir = os.path.join(working_dir, '')
+        self.default_cache_dir = os.path.join(cache_dir, '')
+
+    def load_master_file(self, file_path):
+        logging.debug("Attempting to load config yaml file")
+        with open(file_path, 'r') as yaml_in:
+            self.components_vars = yaml.load(yaml_in, Loader=yaml.FullLoader)
+        logging.debug("Successfully loaded config yaml file")
+
+    def partial_clone(self, directory, target_directory, clone_directory, version):
+        command=f"""
+        git clone \
+        --filter=blob:none  \
+        -q \
+        --no-checkout \
+        git@github.com:JSainsburyPLC/voyager-components.git {clone_directory}
+        cd {clone_directory}
+        git config core.sparsecheckout true
+        echo {directory} >> .git/info/sparse-checkout
+        git checkout -q {version}
+        cp -r {directory} ../{target_directory}
+        cd .. && rm -r {clone_directory}
+        """
+        call_with_exit(command)
+
+    def clone_component(self):
+      for component in self.components_vars:
+          # TODO This should run a worker pool to speed it up
+          directory = self.components_vars[component]['component_folder']
+          version = self.components_vars[component]['version']
+
+          clone_directory = "vc-" + directory + "-" + version
+          target_directory = self.default_cache_dir + "components/" + directory + "-" + version
+
+          # Make sure the dir is there
+          call("mkdir -p " + self.default_cache_dir + "components", shell=True)
+
+          if "development" in self.components_vars[component]:
+              if self.components_vars[component]["development"] == True:
+                  logging.info(f"Copying dev component: {directory}")
+                  copy_tree(os.path.join(self.default_components_dir, directory), target_directory)
+              else:
+                  logging.info(f"Cloning: {directory} - {version}")
+                  self.partial_clone(directory, target_directory, clone_directory, version)
+
+          elif os.path.exists(target_directory):
+            # TODO Check the sha within the directory too, not enough that it's just there
+            logging.error(f"{target_directory} is already cloned.")
+          else:
+            logging.info(f"Cloning: {directory} - {version}")
+            # TODO Tidy up git output from these commands
+            self.partial_clone(directory, target_directory, clone_directory, version)
+
+    def copy_component(self, cloned_component, component):
+        directory = self.components_vars[component]['component_folder']
+        version = self.components_vars[component]['version']
+        target_directory = ".cache/components/" + directory + "-" + version
+
+        # Check if folder exists, otherwise we could overwrite components
+        folder_path = os.path.abspath(cloned_component)
+        if os.path.exists(folder_path):
+            logging.error(f"{folder_path} is an already existing folder. Please ensure you do not have duplicate user defined names")
+            raise IsADirectoryError(folder_path)
+
+        logging.info(f"Copying component: {target_directory} to {cloned_component}")
+        copy_tree(target_directory, cloned_component)
+
+    def generate_remote_state_config(self, component):
+      self.components_vars[component]['terragrunt_vars']['remote_state'] = {
+        'backend': 's3',
+        'generate': {
+          'path': 'backend.tf',
+          'if_exists': 'overwrite_terragrunt'
+        },
+        'config': {
+          'bucket': self.components_vars[component]['terraform_state']['bucket'],
+          'key': self.components_vars[component]['terraform_state']['key'],
+          'region': 'eu-west-1',
+          'encrypt': True,
+          'dynamodb_table': self.components_vars[component]['terraform_state']['dynamodb_table']
+        }
+      }
+
+    # Handle aws login config
+    def aws_login_config(self, component):
+      # Define the default generator config for provider. This will need to be modified
+      self.components_vars[component]['terragrunt_vars']['generate'] = [
+        {
+            'provider': [{
+                'contents': "provider \"aws\" {\n  region = \"eu-west-1\"\n }\n",
+                'if_exists': 'overwrite_terragrunt',
+                'path': 'provider.tf'
+            }]
+        }
+      ]
+      # Add the relevant auth config to the terragrutn config and also invoke the login function
+      if os.getenv("LOCAL") == "true" and "aws_profile" in self.components_vars[component]['auth']:
+          self.login(self.components_vars[component]['auth']['aws_profile'])
+          self.components_vars[component]['terragrunt_vars']['remote_state']['config']['profile'] = \
+            self.components_vars[component]['auth']['aws_profile']
+          self.components_vars[component]['terragrunt_vars']['generate'][0]["provider"][0][
+              "contents"] = "provider \"aws\" {\n  region = \"eu-west-1\"\n  profile = \"" + \
+                            self.components_vars[component]['auth']['aws_profile'] + "\"\n}\n"
+      elif "iam_role" in self.components_vars[component]['auth']:
+          self.components_vars[component]['terragrunt_vars']['iam_role'] = \
+            self.components_vars[component]['auth']['iam_role']
+
+    def generate_terragrunt_config(self, component, cloned_component):
+      # Generate terragrunt config files
+      logging.debug(f"Writing terragrunt vars to {cloned_component}")
+      json.dump(self.components_vars[component]['terragrunt_vars'],
+                open(cloned_component + '/' + 'terragrunt.hcl.json', 'w'))
+
+    def generate_extra_vars(self, component, cloned_component):
+      # Create extra_vars.json file
+      if "extra_vars" in self.components_vars[component]:
+          if os.getenv("LOCAL") == "true" and "aws_profile" in self.components_vars[component]['auth']:
+              self.components_vars[component]['extra_vars']['aws_profile'] = \
+              self.components_vars[component]['auth']['aws_profile']
+          json.dump(self.components_vars[component]['extra_vars'],
+                    open(cloned_component + '/' + 'extra_vars.json', 'w'))
+      else:
+          json.dump({}, open(cloned_component + '/' + 'extra_vars.json', 'w'))
+
+    def generate_config(self, cloned_component, component, component_folder):
+
+      # Copy component to the working directory
+      self.copy_component(cloned_component, component)
+
+      # Generate remote state config from abstracted object
+      self.generate_remote_state_config(component)
+
+      # Login to relevant aws accounts
+      self.aws_login_config(component)
+
+      # Generate terragrunt config files
+      self.generate_terragrunt_config(component, cloned_component)
+
+      # Generate extra vars
+      self.generate_extra_vars(component, cloned_component)
+
+    def create_terraform_variables(self):
+      logging.debug("Processing configuration files")
+      for component in self.components_vars:
+        # Extract terragrunt config from component config
+        logging.debug(f"Creating Vars for {component}")
+
+        # For each component we wish to deploy clone it. This is to allow duplicates of the same component in deployment
+        component_folder = self.components_vars[component]['component_folder']
+        cloned_component = self.default_working_dir + component
+
+        if "enable" in self.components_vars[component]:
+          if self.components_vars[component]["enable"] == False:
+              logging.info(f"{component} is disabled. Skipping")
+          else:
+              self.generate_config(cloned_component, component, component_folder)
+        else:
+          self.generate_config(cloned_component, component, component_folder)
+
+    def plan(self):
+        call_with_exit("terragrunt plan-all")
+
+
+    def apply(self):
+        call_with_exit("terragrunt apply-all --terragrunt-non-interactive")
+
+    def clean_working_dir(self):
+        if os.path.isdir(self.default_working_dir):
+            logging.info(f"Deleting {self.default_working_dir}")
+            shutil.rmtree(self.default_working_dir)
+        else:
+            logging.info(f"Directory doesn't exist: {self.default_working_dir}")
+
+    def run_terragrunt(self, stage):
+        logging.info(f"Running Terragrunt with stage: {stage}")
+        stages = {
+            "plan": self.plan,
+            "apply": self.apply,
+        }
+        stages[stage]()
+        logging.info(f"Finished running Terragrunt with stage: {stage}")
+
+    def login(self, profile):
+        if profile not in self.aws_profiles:
+            logging.info(f"Logging in with {profile}")
+            call("aws-azure-login --profile " + profile + " --no-sandbox --no-prompt", shell=True)
+            self.aws_profiles.append(profile)
+        else:
+            logging.debug(f"Already logged in with {profile}")
+
+
+def open_json(path):
+    returned_text = open(path)
+    returned_json = json.load(returned_text)
+    returned_text.close()
+    return returned_json
+
+
+def generate_config_from_yaml_file(file_path: str, deploy: YamlDeploy):
+    deploy.load_master_file(file_path=file_path)
+    deploy.clone_component()
+    deploy.create_terraform_variables()
+
+@click.group()
+def main():
+    """
+    Sainsbury's voyager orchestration app
+    """
+    pass
+
+
+@main.command()
+@click.option('--env', required=True, help='The ENV to deploy', type=str)
+@click.option('--stage', required=True, default='plan', type=str)
+@click.option('--work-dir', required=True, help='The work directory', default="./work-dir", type=str)
+@click.option('--file', required=False, help='The file to generate the config from',  type=str)
+@click.option('--config-dir', required=False, help='The config-dir', default="configuration/",  type=str)
+@click.option('--component-dir', required=False, help='The component-dir', default="./voyager-components/",  type=str)
+def deploy(env, stage, work_dir, file, config_dir, component_dir):
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    config_prefix = os.path.join(config_dir, env)
+    deploy = YamlDeploy(working_dir=work_dir, components_dir=component_dir)
+    deploy.clean_working_dir()
+    if file:
+        file_path = os.path.join(config_prefix, file + ".yaml")
+        logging.info(f"Generating config: {file_path}")
+        generate_config_from_yaml_file(file_path, deploy)
+        logging.info("Run deploy")
+        deploy.run_terragrunt(stage)
+    else:
+      for path in Path(os.path.join(config_dir, env)).rglob('*.yaml'):
+          logging.info("Found config file:" + str(path))
+          generate_config_from_yaml_file(path, deploy)
+      logging.info("Run deploy")
+      deploy.run_terragrunt(stage)
+
+@main.command()
+@click.option('--env', required=True, help='The ENV to generate terragrunt for', type=str)
+@click.option('--work-dir', required=True, help='The work directory', default="./work-dir", type=str)
+@click.option('--file', required=False, help='The file to generate the config from',  type=str)
+@click.option('--config-dir', required=False, help='The config-dir', default="configuration/",  type=str)
+@click.option('--component-dir', required=False, help='The component-dir', default="./voyager-components/",  type=str)
+def generate(env, work_dir, file, config_dir, component_dir):
+    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(message)s')
+    config_prefix = os.path.join(config_dir, env)
+    deploy = YamlDeploy(working_dir=work_dir, components_dir=component_dir)
+    deploy.clean_working_dir()
+    if file:
+        file_path = os.path.join(config_prefix, file + ".yaml")
+        logging.info(f"Generating config: {file_path}")
+        generate_config_from_yaml_file(file_path, deploy)
+    else:
+      for file in os.listdir(config_prefix):
+          file_path = os.path.join(config_prefix, file)
+          logging.info(f"Generating config: {file_path}")
+          generate_config_from_yaml_file(file_path, deploy)
+
+@main.command()
+def dev():
+    call("/bin/bash", shell=True)
+
+
+@main.command()
+@click.option('--method', required=True, help='The way to clone, ssh or https', type=str)
+@click.option('--manifest', required=False, help='The file path to use to clone repositories',
+              default="./voyager-manifest.json", type=click.Path(exists=True))
+def clone(method, manifest):
+    repos = open_json(click.format_filename(manifest))
+    for (repo, ref) in repos.items():
+        if method == "https":
+            token = os.environ['github_token']
+            call(
+                "git clone --branch " + ref + " https://" + token + ":x-oauth-basic@github.com/JSainsburyPLC/" + repo + ".git",
+                shell=True)
+        elif method == "ssh":
+            call("git clone --branch " + ref + " git@github.com:JSainsburyPLC/" + repo + ".git", shell=True)
+
+
+if __name__ == "__main__":
+    main()

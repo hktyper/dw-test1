@@ -1,0 +1,24 @@
+example_s3_monitor:
+  description: ""
+  component_folder: "s3_notifications"
+  version: "v1.0.0"
+  auth:
+    aws_profile: <aws-azure-login profile>
+  terraform_state:
+    bucket: <s3 bucket>
+    key: <s3 key for a tfstate file>
+    dynamodb_table: <dynamodb table name>
+  terragrunt_vars:
+    inputs:
+      project_name: <voyager-for-example>
+      environment: <dev>
+      owner: <your squad>
+      email: <your squad>@sainsburys.co.uk
+      costcentre: <your squad's costcentre>
+      live: 'no'
+      region: eu-west-1
+      sqs_name: "example_queue"
+      sqs_timeout_seconds: 600 # if used with Lambda, cannot be less than the Lambda's own timeout!
+      sns_source_topic_arns:
+        - "<arn goes here>"
+        - "<another arn goes here>"

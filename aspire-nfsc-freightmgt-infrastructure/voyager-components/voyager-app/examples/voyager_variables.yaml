@@ -1,0 +1,144 @@
+voyager_vpc:
+  description: "VPC for building AMIs"
+  component_folder: "vpc"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    terraform:
+      before_hook:
+        - pre_plan:
+            commands:
+              - "plan"
+            execute:
+              - "/bin/bash"
+              - "./pre_plan.sh"
+        - pre_apply:
+            commands:
+              - "apply"
+            execute:
+              - "/bin/bash"
+              - "./pre_deploy.sh"
+    inputs:
+      project_name:
+      environment:
+      owner:
+      email:
+      costcentre:
+      live: "no"
+      vpc_cidr: 172.16.0.0/16
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+      public_subnets:
+        - 172.16.2.0/24
+        - 172.16.4.0/24
+      private_subnets:
+        - 172.16.1.0/24
+        - 172.16.3.0/24
+      vpc_flowlogs_s3_bucket:
+      single_nat_gateway: true
+      vpc_enable_nat_gateway: false
+      vpc_description: VPC For Building AMIs
+voyager_ecr:
+  description: "ecr for CodePipeline"
+  component_folder: "ecr"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      environment: dev
+      aws_region: eu-west-1
+      service_name:
+      project_name:
+codeartifact:
+  description: "CodeArtifact for storing the voyager-app library"
+  component_folder: "codeartifact"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      codeartifact_domain_key_desc: "CodeArtifact for voyager-app"
+      codeartifact_create_domain: true
+      codeartifact_domain_name:
+      codeartifact_repository:
+voyager_app:
+  description: "Voyager-app component"
+  component_folder: "voyager-app"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    terraform:
+      before_hook:
+        - pre_plan:
+            commands:
+              - "plan"
+            execute:
+              - "/bin/bash"
+              - "./pre_plan.sh"
+        - pre_apply:
+            commands:
+              - "apply"
+            execute:
+              - "/bin/bash"
+              - "./pre_deploy.sh"
+    inputs:
+      environment: dev
+      aws_region: eu-west-1
+      codeartifact_domain: "${dependency.codeartifact.outputs.codeartifact_domain_name}"
+      codeartifact_repo: "${dependency.codeartifact.outputs.codeartifact_repository_name}"
+      ecr_url: "${dependency.ecr.outputs.ecr_url}"
+    dependency:
+      ecr:
+        config_path: ../voyager_ecr
+        mock_outputs:
+          ecr_url: "example.ecr.url"
+      codeartifact:
+        config_path: ../codeartifact
+        mock_outputs:
+          codeartifact_domain_id: "example-domain-id"
+          codeartifact_repository_id: "example-repository-id"
+      vpc:
+        config_path: ../voyager_vpc
+  extra_vars:
+    voyager_app_git_repo: JSainsburyPLC/voyager-app.git
+    voyager_app_git_branch: develop
+    codeartifact_owner:
+    gemfury_token_parameter:
+    region: eu-west-1
+    build_docker_image: false
+    build_library: false
+    build_ami: true
+    instance_type: "m4.large"
+    costcentre:
+    owner:
+    email:
+    python_version: "3.7.4"

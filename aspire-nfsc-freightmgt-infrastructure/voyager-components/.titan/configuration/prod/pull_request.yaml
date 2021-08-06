@@ -1,0 +1,67 @@
+pipeline-ecr:
+  description: "ecr for CodePipeline"
+  component_folder: "ecr"
+  version: "v1.0.0"
+  auth:
+    aws_profile: voyager-non-prod
+  terraform_state:
+    bucket: voyager-checks-terraform-state
+    key: voyager-components/prod/ecr/terraform.tfstate
+    dynamodb_table: voyager-checks-terraform-lock-table
+  terragrunt_vars:
+    inputs:
+      environment: dev
+      aws_region: eu-west-1
+      service_name: pull-request-spike
+      project_name: voyager-components
+pipeline:
+  description: "CodePipeline"
+  component_folder: "codepipeline"
+  development: true
+  version: "v1.0.0"
+  auth:
+    aws_profile: voyager-non-prod
+  terraform_state:
+    bucket: voyager-checks-terraform-state
+    key: voyager-components/prod/codepipeline/terraform.tfstate
+    dynamodb_table: voyager-checks-terraform-lock-table
+  terragrunt_vars:
+    terraform:
+      before_hook:
+        pre_apply:
+          commands:
+            - "apply"
+          execute:
+            - "/bin/bash"
+            - "./pre_deploy.sh"
+    inputs:
+      environment: prod
+      aws_region: eu-west-1
+      service_name: voyager-components
+      repo_name: voyager-components
+      application_source_branch: master
+      account_number: 143260839529
+      github_token: gdp-pear-cicd-token
+      project_name: voyager-components
+      docker_image: ${dependency.pipeline-ecr.outputs.ecr_url}:${run_cmd("git", "log", "-1", "--pretty=format:%h")}
+      codestar_connection_arn: "arn:aws:codestar-connections:eu-west-1:143260839529:connection/38eb4014-d1d4-4f96-97bd-4d57cac5b81a"
+      ecr_url: "${dependency.pipeline-ecr.outputs.ecr_url}"
+      pull_request_enable: true
+      # TODO Can't disable all jobs as it leaves codepipeline with just the initialise stage
+      code_analysis_terraform_enable: true
+      request_change_enable: false
+      test_enable: false
+      build_enable: false
+      approval_enable: false
+      deploy_enable: false
+      post_deploy_enable: false
+      assignment_group: blank
+      change_api_key: blank
+      deployment_item: blank
+    dependency:
+      pipeline-ecr:
+        config_path: ../pipeline-ecr
+        mock_outputs:
+          ecr_url: "example.ecr.url"
+  extra_vars:
+    build_docker_image: true

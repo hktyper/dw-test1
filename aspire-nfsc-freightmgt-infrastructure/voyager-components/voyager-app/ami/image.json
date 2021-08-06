@@ -1,0 +1,72 @@
+{
+  "variables": {
+    "aws_region": "eu-west-1",
+    "instance_type": "{{env `INSTANCE_TYPE`}}",
+    "vpc_id": "{{env `VPC_ID`}}",
+    "subnet_id": "{{env `SUBNET_ID`}}",
+    "costcentre": "{{env `COSTCENTRE`}}",
+    "owner": "{{env `OWNER`}}",
+    "email": "{{env `EMAIL`}}",
+    "live": "no",
+    "python_version": "{{env `PYTHON_VERSION`}}",
+    "environment": "{{env `ENVIRONMENT`}}"
+  },
+  "builders": [
+    {
+      "ami_name": "voyager-app-emr-ami-{{timestamp}}",
+      "instance_type": "{{user `instance_type`}}",
+      "region": "{{user `aws_region`}}",
+      "ami_regions": ["{{user `aws_region`}}"],
+      "source_ami_filter": {
+        "filters": {
+          "virtualization-type": "hvm",
+          "name": "amzn-ami-hvm-*-x86_64-gp2",
+          "root-device-type": "ebs"
+        },
+        "owners": ["137112412989"],
+        "most_recent": true
+      },
+      "type": "amazon-ebs",
+      "subnet_id": "{{user `subnet_id`}}",
+      "vpc_id": "{{user `vpc_id`}}",
+      "run_tags": {
+        "name": "voyager-app-{{user `environment`}}-emr-ami",
+        "costcentre": "{{user `costcentre`}}",
+        "owner": "{{user `owner`}}",
+        "email": "{{user `email`}}",
+        "environment": "{{user `environment`}}",
+        "live": "{{user `live`}}"
+      },
+      "ssh_pty": true,
+      "ssh_username": "ec2-user"
+    }
+  ],
+  "provisioners": [
+    {
+      "type": "file",
+      "source": "./code/temporary_dependencies/robocrop-1.2.0.tar.gz",
+      "destination": "/tmp/robocrop-1.2.0.tar.gz"
+    },
+    {
+      "type": "file",
+      "source": "./code/temporary_dependencies/data-tech-cerberus-security-extension-0.1.2.tar.gz",
+      "destination": "/tmp/data-tech-cerberus-security-extension-0.1.2.tar.gz"
+    },
+    {
+      "type": "file",
+      "source": "./code/temporary_dependencies/data-tech-file-utilities-python-0.0.2.tar.gz",
+      "destination": "/tmp/data-tech-file-utilities-python-0.0.2.tar.gz"
+    },
+    {
+      "type": "file",
+      "source": "./code",
+      "destination": "/tmp/library"
+    },
+    {
+      "type": "shell",
+      "execute_command": "echo 'packer' | sudo -S env {{ .Vars }} {{ .Path }}",
+      "environment_vars": ["PYTHON_VERSION={{user `python_version`}}"],
+      "scripts": ["./ami/bootstrap.sh"]
+    }
+  ]
+}

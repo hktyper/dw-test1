@@ -1,0 +1,1 @@
+echo TODO: Delete any objects already existing in S3

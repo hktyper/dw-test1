@@ -1,0 +1,41 @@
+[
+    {
+      "name": "${name}",
+      "image": "${image}",
+      "essential": true,
+      "environment": [
+          {
+              "name": "API_DOWNLOADER_SERVICE",
+              "value": "${knn_service_url}"
+          },
+          {
+              "name": "API_DOWNLOADER_TABLE",
+              "value": "${table_name}"
+          },
+          {
+              "name": "API_DOWNLOADER_TGT_BUCKET",
+              "value": "${target_bucket}"
+          },
+          {
+              "name": "API_DOWNLOADER_SECRETNAME",
+              "value": "${secret_name}"
+          },
+          {
+              "name": "API_DOWNLOADER_RLIMIT",
+              "value": "${rlimit}"
+          },
+          {
+              "name": "API_DOWNLOADER_CW_NAMESPACE",
+              "value": "${cw_namespace}"
+          }
+      ],
+      "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+            "awslogs-group": "${awslogs-group}",
+            "awslogs-region": "eu-west-1",
+            "awslogs-stream-prefix": "${awslogs-stream-prefix}"
+          }
+      }
+    }
+]

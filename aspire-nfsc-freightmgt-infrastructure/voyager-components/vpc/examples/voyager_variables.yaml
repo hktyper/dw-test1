@@ -1,0 +1,47 @@
+voyager_vpc:
+  description: ""
+  component_folder: "vpc"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      project_name: logistics-service-component-test
+      environment: dev
+      owner: GDP_XXXXX
+      email: GDP_XXXXX@sainsburys.co.uk
+      costcentre: XXXXXX
+      live: "no"
+      vpc_cidr: 0.0.0.0/27
+      vpc_secondary_cidr_blocks:
+        - 0.0.0.0/22
+      region: eu-west-1
+      availability_zones:
+        - eu-west-1a
+        - eu-west-1b
+        - eu-west-1c
+      private_subnets:
+        - 0.0.0.0/25
+        - 0.0.0.0/26
+        - 0.0.0.0/27
+      public_subnets:
+        - 0.0.0.0/27
+        - 0.0.0.0/28
+        - 0.0.0.0/28
+      vpc_flowlogs_s3_bucket: ""
+      single_nat_gateway: true
+      vpc_enable_nat_gateway: false
+      vpc_description: VPC Desc
+      vpc_interface_endpoint_services:
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX
+        - XXXXX

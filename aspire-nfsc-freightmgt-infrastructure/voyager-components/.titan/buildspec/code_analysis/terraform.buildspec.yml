@@ -1,0 +1,10 @@
+# Titan Script - This file should never need to be changed.
+version: 0.2
+run-as: root
+env:
+  git-credential-helper: yes
+
+phases:
+  build:
+    commands:
+      - bash ./.titan/scripts/code_analysis/terraform.sh

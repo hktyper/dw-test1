@@ -1,0 +1,20 @@
+repos:
+  - repo: git://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.31.0 # Get the latest from: https://github.com/antonbabenko/pre-commit-terraform/releases
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_tflint
+  - repo: local
+    hooks:
+      - id: check_for_readmes
+        name: check_for_readmes
+        entry: bash -c 'for dir in */;do if [[ -z "$dir/README.md" ]];then echo "No readme";exit 1;fi;done'
+        language: system
+        pass_filenames: false
+  - repo: local
+    hooks:
+      - id: check_for_updated_readmes
+        name: check_for_updated_readmes
+        entry: .titan/scripts/tf-docs.sh
+        language: script
+        pass_filenames: false

@@ -1,0 +1,25 @@
+# this is an example for deploying s3_raw_transfer component. Please change the values according to your squad account.
+voyager_s3_raw_transfer:
+  description: ""
+  component_folder: "s3_raw_transfer"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    inputs:
+      project_name: ""
+      environment: ""
+      owner: ""
+      email: ""
+      costcentre: ""
+      live: ""
+      region:
+      account_number: ""
+      enable_notification: ""
+      access_logs_bucket: ""

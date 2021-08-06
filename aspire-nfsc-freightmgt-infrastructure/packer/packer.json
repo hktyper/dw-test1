@@ -1,0 +1,37 @@
+{
+    "variables": {
+      "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+      "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+      "base_ami": "ami-0aef57767f5404a3c",
+      "app_name": "freightmgt-ec2-tactical"
+    },
+    "builders": [
+      {
+        "type": "amazon-ebs",
+        "access_key": "{{user `aws_access_key`}}",
+        "secret_key": "{{user `aws_secret_key` }}",
+        "source_ami": "{{user `base_ami`}}",
+        "region": "eu-west-1",
+        "instance_type": "m5.large",
+        "ssh_username": "ubuntu",
+        "ami_name": "{{user `app_name`}}-{{timestamp}}",
+        "associate_public_ip_address": true,
+        "tags": {
+          "Name": "{{user `account`}}-knn-packer-ansible-tactical",
+          "email": "natalie.smith@sainsburys.co.uk",    
+          "owner": "Natalie Smith",
+          "costcentre": "PD7455",
+          "technical-contact": "gdp_apple@sainsburys.co.uk",
+          "project": "aspire-nfsc-freightmgt-freight-management",
+          "dataRetention": "4-years",
+          "dataClassification": "highlySensitivePersonal"
+        }
+      }
+    ],
+    "provisioners": [
+      {
+        "type": "ansible",
+        "playbook_file": "./ansible/playbook.yml",
+        "extra_arguments": [ "--extra-vars", "account={{user `account`}}" ]      }
+    ]
+  }

@@ -1,0 +1,5 @@
+formatter: markdown table
+header-from: main.tf
+settings:
+  indent: 4
+  required: false

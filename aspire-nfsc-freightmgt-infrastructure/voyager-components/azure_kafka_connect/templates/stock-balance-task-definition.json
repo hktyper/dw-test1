@@ -1,0 +1,91 @@
+[
+    {
+        "name": "${container_name}",
+        "image": "${docker_image}",
+        "logConfiguration": {
+            "logDriver": "awslogs",
+            "options": {
+                "awslogs-group": "${aws_logs_group}",
+                "awslogs-region": "${aws_region}",
+                "awslogs-stream-prefix": "${aws_log_stream_prefix}"
+            }
+        },
+        "environment": [
+            {
+                "name": "CONNECT_GROUP_ID",
+                "value": "${CONNECT_GROUP_ID_STOCK_BALANCE}"
+            },
+            {
+                "name": "CONNECT_BOOTSTRAP_SERVERS",
+                "value": "${CONNECT_BOOTSTRAP_SERVERS_AZURE}"
+            },
+            {
+                "name": "CONNECT_CONFIG_STORAGE_TOPIC",
+                "value": "${CONNECT_CONFIG_STORAGE_TOPIC_STOCK_BALANCE}"
+            },
+            {
+                "name": "CONNECT_OFFSET_STORAGE_TOPIC",
+                "value": "${CONNECT_OFFSET_STORAGE_TOPIC_STOCK_BALANCE}"
+            },
+            {
+                "name": "CONNECT_STATUS_STORAGE_TOPIC",
+                "value": "${CONNECT_STATUS_STORAGE_TOPIC_STOCK_BALANCE}"
+            },
+            {
+                "name": "CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR",
+                "value": "${CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR}"
+            },
+            {
+                "name": "CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR",
+                "value": "${CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR}"
+            },
+            {
+                "name": "CONNECT_STATUS_STORAGE_REPLICATION_FACTOR",
+                "value": "${CONNECT_STATUS_STORAGE_REPLICATION_FACTOR}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_NAME",
+                "value": "${KAFKA_CONNECT_S3_SINK_NAME_STOCK_BALANCE}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_TOPICS",
+                "value": "${KAFKA_CONNECT_S3_SINK_TOPICS_STOCK_BALANCE}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_AWS_REGION",
+                "value": "${KAFKA_CONNECT_S3_SINK_AWS_REGION}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_S3_BUCKET",
+                "value": "${KAFKA_CONNECT_S3_SINK_S3_BUCKET}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_TASKS_MAX",
+                "value": "${KAFKA_CONNECT_S3_SINK_TASKS_MAX}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_FLUSH_SIZE",
+                "value": "${KAFKA_CONNECT_S3_SINK_FLUSH_SIZE_STOCK_BALANCE}"
+            },
+            {
+                "name": "KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS",
+                "value": "${KAFKA_CONNECT_S3_SINK_COMMIT_INTERVAL_MS_STOCK_BALANCE}"
+            },
+            {
+                "name": "AUTHENTICATION_TYPE",
+                "value": "${SASL_AUTHENTICATION_TYPE}"
+            },
+            {
+                "name": "SASL_SECRET",
+                "value": "${SASL_SECRET}"
+            },
+            {
+                "name": "KAFKA_HEAP_OPTS",
+                "value": "${KAFKA_HEAP_OPTS}"
+            }
+        ],
+        "entryPoint": [
+            "./start-up.sh"
+        ]
+    }
+]

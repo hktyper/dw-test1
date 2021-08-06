@@ -1,0 +1,6 @@
+gdhjkhdgssdgahjklsdhajkgsdhjksdhg kjldsalkj
+gsdjkh jklsdajklsdg
+
+
+aws-azure-login --profile freightmgmt-nonprod
+export AWS_PROFILE=freightmgmt-nonprod

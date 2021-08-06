@@ -1,0 +1,5 @@
+formatter: markdown table
+header-from: docs.txt
+settings:
+  indent: 4
+  required: false

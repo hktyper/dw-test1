@@ -1,0 +1,27 @@
+pipeline-iam:
+  description: "IAM roles for cross account deployments"
+  component_folder: "codepipeline_iam"
+  version: <git_ref>
+  enable: false
+  terraform_state:
+    bucket:
+    key: <key>/terraform.tfstate
+    dynamodb_table:
+  auth:
+    aws_profile: <local_aws_profile>
+    iam_role: <iam_role_to_assume_cicd>
+  terragrunt_vars:
+    include:
+      - path: "../../configuration/backends/store-ops-non-prod.hcl"
+    inputs:
+      environment:
+      aws_region: eu-west-1
+      service_name:
+      project_name:
+      codepipeline_account_id: 143260839529
+      tags:
+        costcentre:
+        owner:
+        email:
+        live:
+        environment:

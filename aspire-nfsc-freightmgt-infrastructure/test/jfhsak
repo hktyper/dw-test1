@@ -1,0 +1,69 @@
+WARNING: Value for scheme.headers does not match. Please report this to <https://github.com/pypa/pip/issues/9617>
+distutils: /usr/local/include/python3.7m/UNKNOWN
+sysconfig: /usr/local/include/python3.7m
+WARNING: Additional context:
+user = False
+home = None
+root = None
+prefix = None
+Defaulting to user installation because normal site-packages is not writeable
+ERROR: Exception:
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/base_command.py", line 180, in _main
+    status = self.run(options, args)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/req_command.py", line 204, in wrapper
+    return func(self, options, args)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/commands/install.py", line 269, in run
+    session = self.get_default_session(options)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/req_command.py", line 77, in get_default_session
+    self._session = self.enter_context(self._build_session(options))
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/req_command.py", line 93, in _build_session
+    index_urls=self._get_index_urls(options),
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/network/session.py", line 275, in __init__
+    self.headers["User-Agent"] = user_agent()
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/network/session.py", line 132, in user_agent
+    linux_distribution = distro.linux_distribution()  # type: ignore
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 125, in linux_distribution
+    return _distro.linux_distribution(full_distribution_name)
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 681, in linux_distribution
+    self.version(),
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 741, in version
+    self.lsb_release_attr('release'),
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 903, in lsb_release_attr
+    return self._lsb_release_info.get(attribute, '')
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 556, in __get__
+    ret = obj.__dict__[self._fname] = self._f(obj)
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 1011, in _lsb_release_info
+    with open(os.devnull, 'w') as devnull:
+PermissionError: [Errno 13] Permission denied: '/dev/null'
+Traceback (most recent call last):
+  File "/usr/local/bin/pip3", line 8, in <module>
+    sys.exit(main())
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/main.py", line 71, in main
+    return command.main(cmd_args)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/base_command.py", line 104, in main
+    return self._main(args)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/base_command.py", line 221, in _main
+    self.handle_pip_version_check(options)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/req_command.py", line 144, in handle_pip_version_check
+    options, retries=0, timeout=min(5, options.timeout)
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/cli/req_command.py", line 93, in _build_session
+    index_urls=self._get_index_urls(options),
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/network/session.py", line 275, in __init__
+    self.headers["User-Agent"] = user_agent()
+  File "/usr/local/lib/python3.7/site-packages/pip/_internal/network/session.py", line 132, in user_agent
+    linux_distribution = distro.linux_distribution()  # type: ignore
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 125, in linux_distribution
+    return _distro.linux_distribution(full_distribution_name)
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 681, in linux_distribution
+    self.version(),
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 741, in version
+    self.lsb_release_attr('release'),
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 903, in lsb_release_attr
+    return self._lsb_release_info.get(attribute, '')
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 556, in __get__
+    ret = obj.__dict__[self._fname] = self._f(obj)
+  File "/usr/local/lib/python3.7/site-packages/pip/_vendor/distro.py", line 1011, in _lsb_release_info
+    with open(os.devnull, 'w') as devnull:
+PermissionError: [Errno 13] Permission denied: '/dev/null'
+make: *** [dev] Error 1

@@ -1,0 +1,64 @@
+{
+  "schema-version": "1.0.0",
+  "services": [
+    {
+      "tags": [
+        "Voyager",
+        "Terragrunt",
+        "Terraform",
+        "Kafka Connect",
+        "AWS",
+        "Grafana",
+        "Snowflake"
+      ],
+      "type": "OTHER",
+      "name": "Voyager Common Components Library",
+      "description": "Library used to join different individual components together to achieve data ingestion pipelines",
+      "interface": "OTHER"
+    }
+  ],
+  "maintainers": [
+    {
+      "type": "ORG",
+      "name": "Harry Panayiotou",
+      "email": "harry.panayiotou@sainsburys.co.uk",
+      "username": "hapana"
+    },
+    {
+      "type": "ORG",
+      "name": "Jan Malek",
+      "email": "jan.malek@sainsburys.co.uk",
+      "username": "jkmalek"
+    },
+    {
+      "type": "ORG",
+      "name": "Adam Street",
+      "email": "adam.street@sainsburys.co.uk",
+      "username": "AdamStreetSainsburys"
+    }
+  ],
+  "owners": [
+    {
+      "type": "ORG",
+      "name": "Seamus O' Connor",
+      "email": "seamus.oconnor@sainsburys.co.uk",
+      "username": "seamyconnors123"
+    },
+    {
+      "type": "ORG",
+      "name": "Ben Pine",
+      "username": "bjpine",
+      "email": "Ben.Pine@sainsburys.co.uk"
+    }
+  ],
+  "artifacts": [
+    {
+      "name": "Voyager App",
+      "type": "LIBRARY",
+      "format": "PYPI",
+      "description": "Voyager Python library for processing data into aspire"
+    }
+  ],
+  "name": "Voyager Components",
+  "description": "Plug and Play components for Aspire data ingestion needs"
+}
